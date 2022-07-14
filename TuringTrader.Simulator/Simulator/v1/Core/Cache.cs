@@ -28,7 +28,7 @@
 // freed when the thread terminates. This includes objects created for
 // time series and indicators.
 
-#define THREAD_LOCAL
+//#define THREAD_LOCAL
 // with THREAD_LOCAL defined, data will be cached 
 // in thread-local storage, except when the 'global'
 // flag is set

@@ -25,6 +25,7 @@
 #region libraries
 using Microsoft.Win32;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -340,8 +341,9 @@ namespace TuringTrader.Simulator
             // Norgate dll is loaded *while* first instance is created
             private object /*NDW.Watchlist*/ _watchlist;
             private object /*NDW.SecurityList*/ _constituents;
-            private Dictionary<int, object/*List<NDU.RecIndicator>*/> _constituentsTimeSeries = new Dictionary<int, object>();
-            private Dictionary<int, int> _consituentsTimeSeriesIndex = new Dictionary<int, int>();
+            private ConcurrentDictionary<string, object> _symbolToConstituent = new ConcurrentDictionary<string, object>();
+            private ConcurrentDictionary<int, object/*List<NDU.RecIndicator>*/> _constituentsTimeSeries = new ConcurrentDictionary<int, object>();
+            private ConcurrentDictionary<int, int> _consituentsTimeSeriesIndex = new ConcurrentDictionary<int, int>();
             #endregion
             #region internal helpers
             private void getWatchlist()
@@ -392,6 +394,8 @@ namespace TuringTrader.Simulator
                         NDW.SecurityList constituents1;
                         var success = watchlist.GetSecurityList(out constituents1);
                         _constituents = constituents1;
+                        foreach (var constituent in constituents1)
+                            _symbolToConstituent[constituent.Symbol] = constituent;
                     }
 
                     NDW.SecurityList constituents = (NDW.SecurityList)_constituents;
@@ -424,13 +428,14 @@ namespace TuringTrader.Simulator
                 {
                     var dummy = Constituents.First();
                 }
-                NDW.SecurityList constituents = (NDW.SecurityList)_constituents;
-                NDW.Security security = constituents
-                    .Where(c => c.Symbol == symbol)
-                    .FirstOrDefault();
-
-                if (security == null)
+                //NDW.SecurityList constituents = (NDW.SecurityList)_constituents;
+                //NDW.Security security = constituents
+                //    .Where(c => c.Symbol == symbol)
+                //    .FirstOrDefault();
+                if (!_symbolToConstituent.ContainsKey(symbol))
                     return false;
+
+                NDW.Security security = _symbolToConstituent?[symbol] as NDW.Security ?? null;
 
                 if (!_constituentsTimeSeries.ContainsKey(security.AssetID))
                 {
